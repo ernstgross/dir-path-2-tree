@@ -1,0 +1,17 @@
+home
+ me
+  and
+   you
+  can
+   dont
+usr
+ bin
+  bash
+  c
+var
+ text
+  bla
+   bla
+ you
+  dont
+   know

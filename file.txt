@@ -1,0 +1,6 @@
+var.text.bla.bla
+usr.bin.bash
+usr.bin.c
+home.me.and.you
+var.you.dont.know
+home.me.can.dont

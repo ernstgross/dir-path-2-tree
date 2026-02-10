@@ -1,0 +1,20 @@
+   Compiling dir-path-2-tree v0.1.0 (C:\Users\ernst\repos\RustKatas\dir-path-2-tree)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.95s
+     Running `target\debug\dir-path-2-tree.exe`
+home
+ me
+  and
+   you
+  can
+   dont
+usr
+ bin
+  bash
+  c
+var
+ text
+  bla
+   bla
+ you
+  dont
+   know
