@@ -1,27 +1,6 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::collections::BTreeMap;
-
-#[derive(Default)]
-struct Tree(BTreeMap<String, Box<Tree>>);
-
-fn insert_path(tree: &mut BTreeMap<String, Box<Tree>>, parts: &[&str]) {
-    if let Some((key, rest)) = parts.split_first() {
-        let subtree = tree
-            .entry((*key).to_string())
-            .or_insert_with(|| Box::new(Tree::default()));
-        if !rest.is_empty() {
-            insert_path(&mut subtree.0, rest);
-        }
-    }
-}
-
-fn print_tree(tree: &BTreeMap<String, Box<Tree>>, depth: usize) {
-    for (key, subtree) in tree {
-        println!("{}{}", " ".repeat(depth), key);
-        print_tree(&subtree.0, depth + 1);
-    }
-}
+use dir_path_2_tree::{Tree, insert_path, print_tree};
 
 fn main() -> std::io::Result<()> {
     let file = File::open("file.txt")?;

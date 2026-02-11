@@ -1,6 +1,14 @@
 [package]
 name = "dir-path-2-tree"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+
+[lib]
+name = "dir_path_2_tree"
+path = "src/lib.rs"
+
+[[bin]]
+name = "dir-path-2-tree"
+path = "src/main.rs"
 
 [dependencies]
