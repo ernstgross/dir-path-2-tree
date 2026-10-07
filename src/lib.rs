@@ -4,6 +4,22 @@ use std::io::{self, Write};
 #[derive(Default, Debug, PartialEq, Clone)]
 pub struct Tree(pub BTreeMap<String, Box<Tree>>);
 
+/// Drops the tree without recursion.
+///
+/// The derived drop of `Box<Tree>` recurses once per level, so a deep tree would overflow the stack when it goes
+/// out of scope, even if it was built and printed iteratively. The maps are taken out one by one instead; every
+/// child is dropped with an empty map.
+impl Drop for Tree {
+    fn drop(&mut self) {
+        let mut pending = vec![std::mem::take(&mut self.0)];
+        while let Some(map) = pending.pop() {
+            for (_, mut child) in map {
+                pending.push(std::mem::take(&mut child.0));
+            }
+        }
+    }
+}
+
 /// Inserts a path (as dot-separated parts) into the tree structure (RECURSIVE VERSION)
 /// 
 /// # Arguments
