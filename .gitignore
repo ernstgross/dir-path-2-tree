@@ -1,1 +1,3 @@
 /target
+/coverage/
+/actual_output.txt
