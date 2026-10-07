@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::io::{self, Write};
 
 #[derive(Default, Debug, PartialEq, Clone)]
 pub struct Tree(pub BTreeMap<String, Box<Tree>>);
@@ -84,49 +85,111 @@ pub fn insert_path_iterative_with_stack(tree: &mut BTreeMap<String, Box<Tree>>, 
     }
 }
 
-/// Prints the tree structure with indentation based on depth (RECURSIVE VERSION)
-/// 
+/// Writes the tree with indentation based on depth (RECURSIVE VERSION)
+///
+/// Pre-order: a node, then its subtree, then its next sibling. The writer makes the traversal
+/// testable and measurable without a console: a `Vec<u8>` in tests, `std::io::sink()` in benchmarks.
+///
 /// # Arguments
-/// * `tree` - The tree to print
+/// * `out` - Where the lines go
+/// * `tree` - The tree to write
 /// * `depth` - Current depth level for indentation
-pub fn print_tree(tree: &BTreeMap<String, Box<Tree>>, depth: usize) {
+pub fn write_tree<W: Write>(out: &mut W, tree: &BTreeMap<String, Box<Tree>>, depth: usize) -> io::Result<()> {
     for (key, subtree) in tree {
-        println!("{}{}", " ".repeat(depth), key);
-        print_tree(&subtree.0, depth + 1);
+        writeln!(out, "{}{}", " ".repeat(depth), key)?;
+        write_tree(out, &subtree.0, depth + 1)?;
     }
+    Ok(())
 }
 
-/// Prints the tree structure with indentation based on depth (ITERATIVE VERSION)
-/// 
-/// Uses an explicit stack to avoid recursion while maintaining the same traversal order.
+/// Writes the tree with indentation based on depth (ITERATIVE VERSION)
+///
+/// An explicit stack of iterators, one per open level, replaces the call stack: the same pre-order
+/// as `write_tree`, but the depth of the tree costs heap, not call stack.
+///
+/// # Arguments
+/// * `out` - Where the lines go
+/// * `tree` - The tree to write
+/// * `initial_depth` - Depth level of the first line for indentation
+pub fn write_tree_iterative<W: Write>(
+    out: &mut W,
+    tree: &BTreeMap<String, Box<Tree>>,
+    initial_depth: usize,
+) -> io::Result<()> {
+    let mut stack = vec![(tree.iter(), initial_depth)];
+    loop {
+        let next = match stack.last_mut() {
+            Some((children, depth)) => children.next().map(|(key, subtree)| (key, subtree, *depth)),
+            None => break,
+        };
+        match next {
+            Some((key, subtree, depth)) => {
+                writeln!(out, "{}{}", " ".repeat(depth), key)?;
+                stack.push((subtree.0.iter(), depth + 1));
+            }
+            None => {
+                stack.pop();
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Writes the tree with indentation based on depth (SAFE RECURSIVE VERSION)
+///
+/// Recursive like `write_tree`, but a tree deeper than `max_depth` ends with an error of kind
+/// `InvalidInput` instead of a stack overflow. The lines up to that depth are written.
+/// The cost of the depth check is measured in the benchmarks (README, section Benchmarks).
+///
+/// # Arguments
+/// * `out` - Where the lines go
+/// * `tree` - The tree to write
+/// * `depth` - Current depth level for indentation
+/// * `max_depth` - Maximum allowed recursion depth (typical: 1000-5000)
+pub fn write_tree_safe<W: Write>(
+    out: &mut W,
+    tree: &BTreeMap<String, Box<Tree>>,
+    depth: usize,
+    max_depth: usize,
+) -> io::Result<()> {
+    if depth > max_depth {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("Maximum tree depth {} exceeded (current depth: {})", max_depth, depth),
+        ));
+    }
+    for (key, subtree) in tree {
+        writeln!(out, "{}{}", " ".repeat(depth), key)?;
+        write_tree_safe(out, &subtree.0, depth + 1, max_depth)?;
+    }
+    Ok(())
+}
+
+/// Prints the tree structure with indentation based on depth (RECURSIVE VERSION)
 ///
 /// # Arguments
 /// * `tree` - The tree to print
 /// * `depth` - Current depth level for indentation
+pub fn print_tree(tree: &BTreeMap<String, Box<Tree>>, depth: usize) {
+    write_tree(&mut io::stdout().lock(), tree, depth).expect("failed printing to stdout");
+}
+
+/// Prints the tree structure with indentation based on depth (ITERATIVE VERSION)
+///
+/// Uses an explicit stack to avoid recursion while keeping the order of `print_tree`.
+///
+/// # Arguments
+/// * `tree` - The tree to print
+/// * `initial_depth` - Depth level of the first line for indentation
 pub fn print_tree_iterative(tree: &BTreeMap<String, Box<Tree>>, initial_depth: usize) {
-    let mut stack: Vec<(&BTreeMap<String, Box<Tree>>, usize)> = vec![(tree, initial_depth)];
-    
-    while let Some((current_tree, depth)) = stack.pop() {
-        // Collect nodes to add (need mutable vector to reverse later)
-        let mut nodes_to_process = Vec::new();
-        
-        for (key, subtree) in current_tree.iter() {
-            println!("{}{}", " ".repeat(depth), key);
-            nodes_to_process.push((&subtree.0, depth + 1));
-        }
-        
-        // Push in reverse order so they're processed in the correct order when popped
-        for node in nodes_to_process.into_iter().rev() {
-            stack.push(node);
-        }
-    }
+    write_tree_iterative(&mut io::stdout().lock(), tree, initial_depth).expect("failed printing to stdout");
 }
 
 /// Prints the tree structure with indentation based on depth (SAFE RECURSIVE VERSION)
-/// 
+///
 /// This version prevents stack overflow by enforcing a maximum recursion depth limit.
 /// If the depth exceeds the limit, an error is returned instead of crashing.
-/// Performance impact: ~1-2% due to simple depth comparison per call.
+/// The depth check costs less than the measurement noise (README, section Benchmarks).
 ///
 /// # Arguments
 /// * `tree` - The tree to print
@@ -136,7 +199,7 @@ pub fn print_tree_iterative(tree: &BTreeMap<String, Box<Tree>>, initial_depth: u
 /// # Returns
 /// * `Ok(())` if printing succeeded
 /// * `Err(String)` if maximum depth exceeded
-/// 
+///
 /// # Example
 /// ```
 /// use dir_path_2_tree::*;
@@ -151,19 +214,7 @@ pub fn print_tree_safe(
     depth: usize,
     max_depth: usize,
 ) -> Result<(), String> {
-    if depth > max_depth {
-        return Err(format!(
-            "Maximum tree depth {} exceeded (current depth: {})",
-            max_depth, depth
-        ));
-    }
-
-    for (key, subtree) in tree {
-        println!("{}{}", " ".repeat(depth), key);
-        print_tree_safe(&subtree.0, depth + 1, max_depth)?;
-    }
-    
-    Ok(())
+    write_tree_safe(&mut io::stdout().lock(), tree, depth, max_depth).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
