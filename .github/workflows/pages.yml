@@ -1,0 +1,62 @@
+# Builds the project page on GitHub Pages: the README as the start page, the test results with the stack overflow
+# demonstration, the API documentation and the criterion report. Runs on every push to main and by hand.
+# Settings > Pages > Source must be "GitHub Actions" once.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+
+      - name: Tests
+        run: |
+          mkdir -p target/pages-input
+          cargo test 2>&1 | tee target/pages-input/tests.txt
+          test "${PIPESTATUS[0]}" -eq 0
+
+      - name: Stack overflow demonstration
+        run: cargo test --test stack_overflow -- --nocapture --test-threads=1 2>&1 | tee target/pages-input/stack_overflow.txt
+
+      - name: API documentation
+        run: cargo doc --no-deps
+
+      - name: Benchmarks (shared runner, indicative only)
+        run: cargo bench --bench variants -- --warm-up-time 1 --measurement-time 3
+
+      - name: Page
+        run: |
+          pip install --quiet markdown
+          python3 tools/build_pages.py --out target/pages
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/pages
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
