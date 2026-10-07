@@ -277,6 +277,8 @@ What the numbers say:
 
 ## Project Page
 
+The project page: <https://ernstgross.github.io/dir-path-2-tree/>
+
 `.github/workflows/pages.yml` builds a page on every push to `main`: this README, the test results with the stack
 overflow demonstration of that run, the API documentation (`cargo doc`) and the Criterion report of that run
 (`tools/build_pages.py`). The benchmark numbers above come from a dedicated machine; those of the page come from a
