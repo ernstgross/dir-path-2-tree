@@ -279,3 +279,9 @@ The project page: <https://ernstgross.github.io/dir-path-2-tree/>
 results with the stack overflow demonstration of that run, the code coverage with its report, the benchmarks with
 the Criterion report of that run, and the API documentation (`cargo doc`). The benchmark numbers above come from a dedicated machine; those of the page come from a
 shared GitHub runner and are indicative only.
+
+## Credits
+
+Written by Ernst Gross. The tests of the stack overflow, the benchmarks, the project page and parts of this README
+were written with the help of Claude (Anthropic); the commits concerned carry the trailer `Assisted-by: Claude
+(Anthropic)`.
