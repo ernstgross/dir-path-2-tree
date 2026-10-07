@@ -119,25 +119,21 @@ Run them all with `cargo test`.
 
 ## Code Coverage
 
-To generate a code coverage report, first install `cargo-tarpaulin`:
+Coverage is measured with [cargo-llvm-cov](https://github.com/taiki-e/cargo-llvm-cov), source-based through LLVM:
 
-```bash
-cargo install cargo-tarpaulin
+```
+rustup component add llvm-tools-preview
+cargo install cargo-llvm-cov --locked
+cargo llvm-cov --html
 ```
 
-Generate an HTML coverage report:
+The report is written to `target/llvm-cov/html/index.html`; `cargo llvm-cov` alone prints the summary. The project
+page shows the coverage of every push to `main`, file by file and line by line.
 
-```bash
-cargo tarpaulin --out Html --output-dir coverage
-```
-
-The report will be generated at `coverage/tarpaulin-report.html`. To view it, start a local HTTP server:
-
-```bash
-python -m http.server 8888
-```
-
-Then open `http://localhost:8888/tarpaulin-report.html` in your browser.
+What the numbers leave out: `src/main.rs` runs only with `cargo run`; the `print_` functions, thin wrappers that
+write to the console, run in doc tests, which cargo-llvm-cov does not count by default; and a child process of the
+stack overflow demonstration aborts before it can write its profile - the routines it crashes in are covered by the
+other tests.
 
 ## Architecture
 
@@ -279,7 +275,7 @@ What the numbers say:
 
 The project page: <https://ernstgross.github.io/dir-path-2-tree/>
 
-`.github/workflows/pages.yml` builds a page on every push to `main`: this README, the test results with the stack
-overflow demonstration of that run, the API documentation (`cargo doc`) and the Criterion report of that run
-(`tools/build_pages.py`). The benchmark numbers above come from a dedicated machine; those of the page come from a
+`.github/workflows/pages.yml` builds it on every push to `main` (`tools/build_pages.py`): this README, the test
+results with the stack overflow demonstration of that run, the code coverage with its report, the benchmarks with
+the Criterion report of that run, and the API documentation (`cargo doc`). The benchmark numbers above come from a dedicated machine; those of the page come from a
 shared GitHub runner and are indicative only.

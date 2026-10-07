@@ -1,5 +1,5 @@
 # Builds the project page on GitHub Pages: the README as the start page, the test results with the stack overflow
-# demonstration, the API documentation and the criterion report. Runs on every push to main and by hand.
+# demonstration, the code coverage, the benchmarks and the API documentation. Runs on every push to main and by hand.
 # Settings > Pages > Source must be "GitHub Actions" once.
 name: Pages
 
@@ -35,6 +35,14 @@ jobs:
 
       - name: Stack overflow demonstration
         run: cargo test --test stack_overflow -- --nocapture --test-threads=1 2>&1 | tee target/pages-input/stack_overflow.txt
+
+      - name: Code coverage
+        run: |
+          rustup component add llvm-tools-preview
+          cargo install cargo-llvm-cov --locked --version 0.9.1
+          cargo llvm-cov --no-report
+          cargo llvm-cov report --html --output-dir target/pages-input/coverage
+          cargo llvm-cov report --json --summary-only --output-path target/pages-input/coverage.json
 
       - name: API documentation
         run: cargo doc --no-deps
